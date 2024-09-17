@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Control Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            height: 60vh;
+            width: 100%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    <h1>Fleet Control Dashboard</h1>
+    <div id="map"></div>
+    <table id="vehicle_table">
+        <thead>
+            <tr>
+                <th>Vehicle ID</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Timestamp</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([41.9028, 12.4964], 6);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        fetch('/api/current_locations')
+            .then(response => response.json())
+            .then(data => {
+                var tableBody = document.querySelector('#vehicle_table tbody');
+                data.forEach(record => {
+                    var row = tableBody.insertRow();
+                    row.insertCell(0).textContent = record.vehicle_id;
+                    row.insertCell(1).textContent = record.latitude;
+                    row.insertCell(2).textContent = record.longitude;
+                    row.insertCell(3).textContent = record.timestamp;
+
+                    var linkCell = row.insertCell(4);
+                    var link = document.createElement('a');
+                    link.href = `/vehicle_history/${record.vehicle_id}`;
+                    link.textContent = 'Details';
+                    linkCell.appendChild(link);
+
+                    L.marker([record.latitude, record.longitude]).addTo(map)
+                        .bindPopup(`<b>${record.vehicle_id}</b><br>Lat: ${record.latitude}<br>Lng: ${record.longitude}<br><a href="/vehicle_history/${record.vehicle_id}">Details</a>`)
+                        .openPopup();
+
+                    row.addEventListener('click', () => {
+                        window.location.href = `/vehicle_history/${record.vehicle_id}`;
+                    });
+                });
+            });
+    </script>
+</body>
+</html>
