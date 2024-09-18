@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timezone, timedelta
 
 # Configurazione Flask
-server_url = "http://your-flask-app.pythonanywhere.com/receive_data"
+server_url = "http://requestforwarder.pythonanywhere.com/receive_data"
 
 # Funzione per simulare i dati dei sensori
 def get_sensor_data():

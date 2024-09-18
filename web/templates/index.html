@@ -3,80 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fleet Control Dashboard</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <title>ESP32 Data Forwarder</title>
     <style>
         body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            min-height: 100vh;
             font-family: Arial, sans-serif;
         }
-        #map {
-            height: 60vh;
+        .container {
+            text-align: center;
+            max-width: 600px;
             width: 100%;
+            margin: 20px;
         }
-        table {
+        textarea, select, input {
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-        th {
-            background-color: #f4f4f4;
+            margin: 10px 0;
         }
     </style>
-</head>
-<body>
-    <h1>Fleet Control Dashboard</h1>
-    <div id="map"></div>
-    <table id="vehicle_table">
-        <thead>
-            <tr>
-                <th>Vehicle ID</th>
-                <th>Latitude</th>
-                <th>Longitude</th>
-                <th>Timestamp</th>
-                <th>Details</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Includi jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        var map = L.map('map').setView([41.9028, 12.4964], 6);
+        // Funzione per aggiornare lo stato della pagina
+        function updateStatus() {
+            $.get('/status', function(data) {
+                $('#last-message').text(data.last_message);
+                $('#last-timestamp').text(data.readable_timestamp);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        fetch('/api/current_locations')
-            .then(response => response.json())
-            .then(data => {
-                var tableBody = document.querySelector('#vehicle_table tbody');
-                data.forEach(record => {
-                    var row = tableBody.insertRow();
-                    row.insertCell(0).textContent = record.vehicle_id;
-                    row.insertCell(1).textContent = record.latitude;
-                    row.insertCell(2).textContent = record.longitude;
-                    row.insertCell(3).textContent = record.timestamp;
-
-                    var linkCell = row.insertCell(4);
-                    var link = document.createElement('a');
-                    link.href = `/vehicle_history/${record.vehicle_id}`;
-                    link.textContent = 'Details';
-                    linkCell.appendChild(link);
-
-                    L.marker([record.latitude, record.longitude]).addTo(map)
-                        .bindPopup(`<b>${record.vehicle_id}</b><br>Lat: ${record.latitude}<br>Lng: ${record.longitude}<br><a href="/vehicle_history/${record.vehicle_id}">Details</a>`)
-                        .openPopup();
-
-                    row.addEventListener('click', () => {
-                        window.location.href = `/vehicle_history/${record.vehicle_id}`;
-                    });
+                // Aggiorna lo stato degli invii
+                $('#send-statuses').empty();
+                data.send_statuses.forEach(function(status) {
+                    $('#send-statuses').append('<li>' + status + '</li>');
                 });
             });
+        }
+
+        // Aggiorna la pagina ogni 10 secondi
+        setInterval(updateStatus, 10000);
+
+        // Aggiorna la pagina al primo caricamento
+        $(document).ready(function() {
+            updateStatus();
+        });
     </script>
+</head>
+<body>
+    <div class="container">
+        <h2>Ultimo messaggio ricevuto:</h2>
+        <div id="last-message">Nessun messaggio ricevuto</div>
+
+        <h2>Timestamp dell'ultimo messaggio:</h2>
+        <div id="last-timestamp">Nessun timestamp ricevuto</div>
+
+        <h1>ESP32 Data Forwarder</h1>
+        <form method="POST">
+            <label for="sites">Siti a cui inviare i dati (uno per riga):</label><br>
+            <textarea id="sites" name="sites" rows="10" cols="50"></textarea><br><br>
+            
+            <label for="method">Metodo HTTP:</label>
+            <select id="method" name="method">
+                <option value="POST">POST</option>
+                <option value="GET">GET</option>
+            </select><br><br>
+
+            <label for="interval">Intervallo (secondi):</label>
+            <input type="number" id="interval" name="interval" value="60"><br><br>
+
+            <input type="submit" value="Inizia a inviare">
+        </form>
+        
+        <form method="POST" action="/stop">
+            <button type="submit">Interrompi l'invio</button>
+        </form>
+
+        <h2>Stato degli invii:</h2>
+        <div id="send-statuses">
+            <ul></ul>
+        </div>
+    </div>
 </body>
 </html>
